@@ -248,21 +248,50 @@ correct = 0
 
 numbers = 200
 
+print("calculating % correct from testing set on trained neural net")
+
 for i in range(numbers):
 
     output = testNetwork.computeNetwork(testingImages[i])
 
     label = testingLabels[i]
 
-    print("network number: {}".format(maxNumberIndex(output)))
+    #print("network number: {}".format(maxNumberIndex(output)))
 
-    print("correct label: {}".format(maxNumberIndex(label)))
+    #print("correct label: {}".format(maxNumberIndex(label)))
 
     if maxNumberIndex(output) - maxNumberIndex(label) == 0:
         correct += 1
 
 print("% correct: {}%".format((correct / numbers) * 100))
 
+
+untrainedNN = NeuralNet()
+
+untrainedNN.addLayer(784,100)
+
+untrainedNN.addLayer(100,10)
+
+correct = 0
+
+numbers = 200
+
+print("calculating % correct from testing set on untrained neural net")
+
+for i in range(numbers):
+
+    output = untrainedNN.computeNetwork(testingImages[i])
+
+    label = testingLabels[i]
+
+    #print("network number: {}".format(maxNumberIndex(output)))
+
+    #print("correct label: {}".format(maxNumberIndex(label)))
+
+    if maxNumberIndex(output) - maxNumberIndex(label) == 0:
+        correct += 1
+
+print("% correct: {}%".format((correct / numbers) * 100))
 
 '''
 nn = NeuralNet()
