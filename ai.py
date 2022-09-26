@@ -4,14 +4,28 @@ from PIL import Image
 import random
 import math
 import threading
+import json
 
 def showImage(imageArr):
     image = Image.fromarray(np.uint8(np.array(imageArr).reshape((28,28))), mode='L')
     image.show()
 
+def showNormalizedImage(imageArr):
+    npImage = np.array(imageArr).reshape((28,28))
+    scaledNpImage = np.multiply(npImage, 255)
+    image = Image.fromarray(np.uint8(scaledNpImage), mode='L')
+    image.show()
+
 class NeuralNet():
     def __init__(self):
         self.layers = []
+
+    def eval(self, testInput, testLabels): #returns SSE
+        testLoss = 0
+        for j in range(len(testInput)): #computes error for test set
+            computedNetwork = self.computeNetwork(testInput[j].tolist())
+            testLoss += sum(self.lossFunctionForList(computedNetwork, testLabels[j])) #adds the error
+        return testLoss
 
     def activationFunction(self, input):
         if -30 > input:
@@ -62,24 +76,18 @@ class NeuralNet():
             output.append(self.lossFunctionDerivative(listInp[i], expectedListInp[i]))
         return output
 
+    def addNoiseToData(self, arrInput): #adds some noise if a value is under 0.05
+        out = []
+        for i in range(len(arrInput)):
+            if arrInput[i] < 0.05:
+                out.append(arrInput[i] + random.random() / 5) #adds a random number between 0 and 0.2
+            else:
+                out.append(arrInput[i])
+        return out
 
 
     def backpropagation(self, networkOutput, expectedOutput):
        #networkOutput = self.computeNetwork(input)
-
-        '''
-        outputCostDerivative = self.lossFunctionDerivativeForList(networkOutput, expectedOutput) #reusable
-        outputActivationDerivative = self.useActivationDerivativeOnList(networkOutput) #reusable
-        layerWeightDerivative = self.useActivationOnList(self.layers[-1-1].previousOutputValues) #reuses the activation function which isnt optimal. bad code.
-
-        for i in range(self.layers[-1].outputLen):
-            for j in range(self.layers[-1-1].outputLen):
-                self.layers[-1].weightDerivatives[i][j] = outputCostDerivative[i] * outputActivationDerivative[i] * layerWeightDerivative[j]
-                self.layers[-1].biasDerivatives[i] = outputCostDerivative[i] * outputActivationDerivative[i]
-
-        '''
-
-
 
         outputCostDerivative = self.lossFunctionDerivativeForList(networkOutput, expectedOutput) #reusable
         outputActivationDerivative = self.useActivationDerivativeOnList(networkOutput) #reusable
@@ -96,7 +104,7 @@ class NeuralNet():
                         newNodeValue[i] += nodeValue[j] * self.layers[0 - layerIndex].weights[j][i] 
 
                 for i in range(len(newNodeValue)): #calculating a1 over z1
-                    newNodeValue[i] *= self.activationFunctionDerivative(self.layers[-1-layerIndex].previousOutputValues[i])
+                    newNodeValue[i] *= self.activationFunctionDerivative(self.layers[-1-layerIndex].previousInputValues[i])
 
                 nodeValue = newNodeValue
 
@@ -121,7 +129,9 @@ class NeuralNet():
         for i in range(epochs):
             trainingLoss = 0
             for j in range(len(datasetInput)):
-                computedNetwork = self.computeNetwork(datasetInput[j])
+                noisedDataInput = self.addNoiseToData(datasetInput[j].tolist()) #train using datainput with randomized noise to reduce overfitting
+                #showNormalizedImage(noisedDataInput)
+                computedNetwork = self.computeNetwork(noisedDataInput)
                 trainingLoss += sum(self.lossFunctionForList(computedNetwork, datasetLabels[j])) #adds the error
                 self.backpropagation(computedNetwork, datasetLabels[j])
                 self.applyDerivatives(learningRate)
@@ -130,11 +140,30 @@ class NeuralNet():
 
             print("MSE for training epoch #{}: {}".format(str(i), trainingLoss/len(datasetInput))) #divides SSE with n inputs for MSE
             
-            testLoss = 0
-            for j in range(len(testInput)): #computes error for test set
-                computedNetwork = self.computeNetwork(testInput[j])
-                testLoss += sum(self.lossFunctionForList(computedNetwork, testLabels[j])) #adds the error
-            print("MSE for testing epoch #{}: {}".format(str(i), trainingLoss/len(testInput)))
+            testLoss = self.eval(testInput, testLabels)
+            print("MSE for testing epoch #{}: {}".format(str(i), testLoss/len(testInput)))
+
+    def saveNetwork(self, filename):
+        listLayers = []
+
+        for i in range(len(self.layers)):
+            listLayers.append(self.layers[i].getLayerAsJson())
+        
+        jsonObject = json.dumps(listLayers)
+
+        with open("{}.json".format(filename), "w") as outfile:
+            outfile.write(jsonObject)
+
+    def loadNetwork(self, filename):
+        f = open("{}.json".format(filename))
+        jsonObject = json.load(f)
+
+
+        for jsonString in jsonObject:
+            pythonReadable = json.loads(jsonString)
+            newLayer = self.Layer(pythonReadable["inputLen"], pythonReadable["outputLen"])
+            newLayer.applyWeightsAndBias(pythonReadable["weights"], pythonReadable["bias"])
+            self.layers.append(newLayer)
 
 
         
@@ -169,6 +198,15 @@ class NeuralNet():
                     self.weights[i][j] -= self.weightDerivatives[i][j] * learningRate
                 self.bias[i] -= self.biasDerivatives[i] * learningRate
 
+        def getLayerAsJson(self):
+            return json.dumps(self.__dict__)
+
+        def applyWeightsAndBias(self, weights, bias):
+            self.weights = weights
+            self.bias = bias
+        
+
+
 
 
 def translateLabelsIntoNetwork(labelsList, dimensions):
@@ -185,7 +223,8 @@ def scaleTrainingImages(images, scalar):
         out.append(np.multiply(image, scalar))
     return out
 
-
+def maxNumberIndex(numberList):
+    return numberList.index(max(numberList))
 
 mnistData = MNIST()
 
@@ -201,15 +240,31 @@ trainingLabels = translateLabelsIntoNetwork(trainingLabels, 10)
 
 testingLabels = translateLabelsIntoNetwork(testingLabels, 10)
 
+testNetwork = NeuralNet()
 
+testNetwork.loadNetwork("2x7000trainedMnist")
+
+for i in range(10):
+
+    output = testNetwork.computeNetwork(testingImages[i])
+
+    label = testingLabels[i]
+
+    print("network number: {}".format(maxNumberIndex(output)))
+
+    print("correct label: {}".format(maxNumberIndex(label)))
+
+
+'''
 nn = NeuralNet()
 
 nn.addLayer(784,100)
 
 nn.addLayer(100,10)
 
-nn.learnFromDataset(trainingImages[0:2000], trainingLabels[0:2000], testingImages[0:200], testingLabels[0:200], 0.1, 5)
+nn.learnFromDataset(trainingImages[0:7000], trainingLabels[0:7000], testingImages[0:400], testingLabels[0:400], 0.08, 2)
 
+nn.saveNetwork("2x7000trainedMnist")
 
-
+'''
 print("done")
