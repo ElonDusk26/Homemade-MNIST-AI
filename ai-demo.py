@@ -56,10 +56,10 @@ nn.addLayer(100, 10) #hidden layer of 100 nodes and an output layer of 10 nodes.
 ##layers can be added as needed and wanted. The only limitation is hardware
 
 
-#train the model on the chosen dataset. Ive chosen the first 2500 images of the training dataset.
+#train the model on the chosen dataset. Ive chosen the first 500 images of the training dataset.
 #Then specify the testing images and labels, so its possible to understand the accuracy of the model in a general usecase. If it has a high accuracy when training but low when testing, then the AI is overfitted.
 #the training method used here has a hardcoded noise function. It adds random noise to pixels with a lower value than 0.05. 
-#The learning rate is then specified to 0.08, which is the coefficient used to scale down the changes from the derivatives found after the backpropagation phase.
+#The learning rate is then specified to 0.05, which is the coefficient used to scale down the changes from the derivatives found after the backpropagation phase.
 #lastly the epoch is specified, which describes the amount of times to loop through the training data.
 nn.learnFromDataset(trainingImages[0:500], trainingLabels[0:500], testingImages[0:100], testingLabels[0:100], 0.05, 1) 
 
