@@ -37,7 +37,7 @@ class NeuralNet():
     def activationFunctionDerivative(self, input):
         return self.activationFunction(input) * (1-self.activationFunction(input))
 
-    def useActivationOnList(self, listInp):
+    def useActivationOnList(self, listInp): #very ugly implementation, but it gets the job done in a readable way. 
         out = []
         for number in listInp:
             out.append(self.activationFunction(number))
@@ -126,6 +126,7 @@ class NeuralNet():
 
 
     def learnFromDataset(self, datasetInput, datasetLabels, testInput, testLabels, learningRate, epochs, threads=1): #add multithreading
+        print("learning for {} epochs. Dataset size {} and test data size {}. using learning rate of {}".format(epochs, len(datasetInput), len(testInput), learningRate))
         for i in range(epochs):
             trainingLoss = 0
             for j in range(len(datasetInput)):
@@ -136,7 +137,7 @@ class NeuralNet():
                 self.backpropagation(computedNetwork, datasetLabels[j])
                 self.applyDerivatives(learningRate)
                 if j % 10 == 0:
-                    print("progress for epoch: {}%".format((j/len(datasetInput))*100))
+                    print("progress for epoch: {}%".format((j/len(datasetInput))*100)+ " "*100,end='\r') #padding to ensure overwrite
 
             print("MSE for training epoch #{}: {}".format(str(i), trainingLoss/len(datasetInput))) #divides SSE with n inputs for MSE
             
@@ -226,83 +227,85 @@ def scaleTrainingImages(images, scalar):
 def maxNumberIndex(numberList):
     return numberList.index(max(numberList))
 
-mnistData = MNIST()
+if __name__=="__main__":
 
-trainingImages, trainingLabels = mnistData.load_training()
+    mnistData = MNIST()
 
-trainingImages = scaleTrainingImages(trainingImages, 1/255)
+    trainingImages, trainingLabels = mnistData.load_training()
 
-testingImages, testingLabels = mnistData.load_testing()
+    trainingImages = scaleTrainingImages(trainingImages, 1/255)
 
-testingImages = scaleTrainingImages(testingImages, 1/255)
+    testingImages, testingLabels = mnistData.load_testing()
 
-trainingLabels = translateLabelsIntoNetwork(trainingLabels, 10)
+    testingImages = scaleTrainingImages(testingImages, 1/255)
 
-testingLabels = translateLabelsIntoNetwork(testingLabels, 10)
+    trainingLabels = translateLabelsIntoNetwork(trainingLabels, 10)
 
-testNetwork = NeuralNet()
+    testingLabels = translateLabelsIntoNetwork(testingLabels, 10)
 
-testNetwork.loadNetwork("2x7000trainedMnist")
+    testNetwork = NeuralNet()
 
-correct = 0
+    testNetwork.loadNetwork("2x7000trainedMnist")
 
-numbers = 200
+    correct = 0
 
-print("calculating % correct from testing set on trained neural net")
+    numbers = 300
 
-for i in range(numbers):
+    print("calculating % correct from testing set on trained neural net")
 
-    output = testNetwork.computeNetwork(testingImages[i])
+    for i in range(numbers):
 
-    label = testingLabels[i]
+        output = testNetwork.computeNetwork(testingImages[i])
 
-    #print("network number: {}".format(maxNumberIndex(output)))
+        label = testingLabels[i]
 
-    #print("correct label: {}".format(maxNumberIndex(label)))
+        #print("network number: {}".format(maxNumberIndex(output)))
 
-    if maxNumberIndex(output) - maxNumberIndex(label) == 0:
-        correct += 1
+        #print("correct label: {}".format(maxNumberIndex(label)))
 
-print("% correct: {}%".format((correct / numbers) * 100))
+        if maxNumberIndex(output) - maxNumberIndex(label) == 0:
+            correct += 1
+
+    print("% correct: {}%".format((correct / numbers) * 100))
 
 
-untrainedNN = NeuralNet()
+    untrainedNN = NeuralNet()
 
-untrainedNN.addLayer(784,100)
+    untrainedNN.addLayer(784,100)
 
-untrainedNN.addLayer(100,10)
+    untrainedNN.addLayer(100,10)
 
-correct = 0
+    correct = 0
 
-numbers = 200
+    numbers = 200
 
-print("calculating % correct from testing set on untrained neural net")
+    print("calculating % correct from testing set on untrained neural net")
 
-for i in range(numbers):
+    for i in range(numbers):
 
-    output = untrainedNN.computeNetwork(testingImages[i])
+        output = untrainedNN.computeNetwork(testingImages[i])
 
-    label = testingLabels[i]
+        label = testingLabels[i]
 
-    #print("network number: {}".format(maxNumberIndex(output)))
+        #print("network number: {}".format(maxNumberIndex(output)))
 
-    #print("correct label: {}".format(maxNumberIndex(label)))
+        #print("correct label: {}".format(maxNumberIndex(label)))
 
-    if maxNumberIndex(output) - maxNumberIndex(label) == 0:
-        correct += 1
+        if maxNumberIndex(output) - maxNumberIndex(label) == 0:
+            correct += 1
 
-print("% correct: {}%".format((correct / numbers) * 100))
+    print("% correct: {}%".format((correct / numbers) * 100))
 
-'''
-nn = NeuralNet()
+    '''
+    nn = NeuralNet()
 
-nn.addLayer(784,100)
+    nn.addLayer(784,100)
 
-nn.addLayer(100,10)
+    nn.addLayer(100,10)
 
-nn.learnFromDataset(trainingImages[0:7000], trainingLabels[0:7000], testingImages[0:400], testingLabels[0:400], 0.08, 2)
+    nn.learnFromDataset(trainingImages[0:7000], trainingLabels[0:7000], testingImages[0:400], testingLabels[0:400], 0.08, 2)
 
-nn.saveNetwork("2x7000trainedMnist")
+    nn.saveNetwork("2x7000trainedMnist")
 
-'''
-print("done")
+    '''
+    print("done")
